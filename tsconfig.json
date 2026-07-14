@@ -20,7 +20,9 @@
       "@config/*": ["./src/config/*"],
       "@infrastructure/*": ["./src/infrastructure/*"],
       "@lib/*": ["./src/lib/*"],
-      "@modules/*": ["./src/modules/*"]
+      "@modules/*": ["./src/modules/*"],
+
+      "@generated/*": ["./src/generated/*"]
     }
   },
   "include": ["src/**/*"] /* Tells tsc to only compile files in src */,

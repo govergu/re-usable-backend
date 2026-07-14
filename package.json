@@ -1,0 +1,23 @@
+{
+  "name": "re-usable-backend",
+  "version": "1.0.0",
+  "description": "reusable backend template for me",
+  "license": "ISC",
+  "author": "govergu",
+  "type": "module",
+  "main": "dist/server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "tsx watch src/server.ts",
+    "clean": "rimraf dist",
+    "build": "tsc",
+    "start": "node dist/server.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6"
+  }
+}

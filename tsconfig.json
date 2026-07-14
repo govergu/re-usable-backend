@@ -1,0 +1,31 @@
+{
+  "compilerOptions": {
+    "target": "es2023" /* Specify ECMAScript target version */,
+    "module": "NodeNext" /* Specify module code generation */,
+    "moduleResolution": "NodeNext" /* How TypeScript looks up modules */,
+    "rootDir": "./src" /* Locate your source files */,
+    "outDir": "./dist" /* Where to output compiled JavaScript */,
+    "allowJs": false,
+
+    "strict": true /* Enable all strict type-checking options */,
+
+    "esModuleInterop": true /* Emits additional JavaScript to ease importing CommonJS modules */,
+    "skipLibCheck": true /* Skip type checking of declaration files (*.d.ts) for speed */,
+    "forceConsistentCasingInFileNames": true /* Disallow inconsistently-cased references to the same file */,
+
+    /* Path Aliases Setup */
+    // "baseUrl": "./src",
+    "paths": {
+      "@common/*": ["./common/*"],
+      "@middleware/*": ["./middleware/*"],
+      "@config/*": ["./config/*"],
+      "@generated/*": ["./generated/*"],
+      "@infrastructure/*": ["./infrastructure/*"],
+      "@lib/*": ["./lib/*"],
+      "@modules/*": ["./modules/*"],
+      "@views/*": ["./views/*"]
+    }
+  },
+  "include": ["src/**/*"] /* Tells tsc to only compile files in src */,
+  "exclude": ["node_modules", "dist"]
+}

@@ -17,8 +17,6 @@
     // "baseUrl": "./src",
     "paths": {
       "@common/*": ["./src/common/*"],
-      "@utils/*": ["./src/common/utils"],
-      "@middleware/*": ["./src/common/middleware*"],
       "@config/*": ["./src/config/*"],
       "@infrastructure/*": ["./src/infrastructure/*"],
       "@lib/*": ["./src/lib/*"],

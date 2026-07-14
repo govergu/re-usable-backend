@@ -16,14 +16,13 @@
     /* Path Aliases Setup */
     // "baseUrl": "./src",
     "paths": {
-      "@common/*": ["./common/*"],
-      "@middleware/*": ["./middleware/*"],
-      "@config/*": ["./config/*"],
-      "@generated/*": ["./generated/*"],
-      "@infrastructure/*": ["./infrastructure/*"],
-      "@lib/*": ["./lib/*"],
-      "@modules/*": ["./modules/*"],
-      "@views/*": ["./views/*"]
+      "@common/*": ["./src/common/*"],
+      "@utils/*": ["./src/common/utils"],
+      "@middleware/*": ["./src/common/middleware*"],
+      "@config/*": ["./src/config/*"],
+      "@infrastructure/*": ["./src/infrastructure/*"],
+      "@lib/*": ["./src/lib/*"],
+      "@modules/*": ["./src/modules/*"]
     }
   },
   "include": ["src/**/*"] /* Tells tsc to only compile files in src */,

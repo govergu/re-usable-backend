@@ -16,6 +16,18 @@ const envSchema = z.object({
   DATABASE_URL: z.url({
     message: "DATABASE_URL must be a valid connection string string",
   }),
+
+  JWT_ACCESS_SECRET: z.string().min(8, {
+    message: "JWT_ACCESS_SECRET must be at least 8 characters long",
+  }),
+  JWT_ACCESS_EXPIRES: z.string().default("15m"),
+
+  JWT_REFRESH_SECRET: z.string().min(8, {
+    message: "JWT_REFRESH_SECRET must be at least 8 characters long",
+  }),
+  JWT_REFRESH_EXPIRES: z.string().default("7d"),
+
+  COOKIE_EXPIRES_DAYS: z.coerce.number().min(1).default(7),
 });
 
 // safe parsing the env configs

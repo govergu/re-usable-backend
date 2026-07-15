@@ -1,8 +1,7 @@
 import { globalErrorHandler } from "@common/middleware/error.middleware.js";
 import express from "express";
 import { morganMiddleware } from "@common/middleware/morgan.middleware.js";
-
-import authRoutes from "./modules/auth/auth.routes.js";
+import { authRoutes } from "@modules/auth/auth.routes.js";
 
 const app = express();
 

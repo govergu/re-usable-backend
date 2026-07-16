@@ -20,3 +20,21 @@ export const loginSchema = z.object({
   email: z.email(),
   password: passwordSchema,
 });
+
+// 🔁 Change password
+export const changePasswordSchema = z.object({
+  currentPassword: z.string(),
+  newPassword: passwordSchema,
+});
+
+export const forgotPasswordSchema = z.object({
+  email: z.email(),
+});
+
+export const resetPasswordSchema = z.object({
+  newPassword: passwordSchema,
+});
+
+export const resendEmailVerificationSchema = z.object({
+  email: z.email(),
+});

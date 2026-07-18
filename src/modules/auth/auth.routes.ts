@@ -18,6 +18,7 @@ import {
   resendEmailVerificationSchema,
   resetPasswordSchema,
 } from "./auth.validation.js";
+import { protect } from "@common/middleware/auth.middleware.js";
 
 // const authRoutes = express.authRoutes();
 
@@ -55,13 +56,5 @@ authRoutes.post(
 );
 
 // Protected User session actions
-authRoutes.get(
-  "/me",
-  // protect,
-  me,
-);
-authRoutes.post(
-  "/logout",
-  // protect,
-  logout,
-);
+authRoutes.get("/me", protect, me);
+authRoutes.post("/logout", protect, logout);

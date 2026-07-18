@@ -4,7 +4,7 @@ import { morganMiddleware } from "@common/middleware/morgan.middleware.js";
 import { authRoutes } from "@modules/auth/auth.routes.js";
 import { notFound } from "@common/middleware/notFound.middleware.js";
 import { globalErrorHandler } from "@common/middleware/error.middleware.js";
-import { userRoutes } from "@modules/users/user.router.js";
+import { userRoutes } from "@modules/users/user.routes.js";
 
 const app = express();
 

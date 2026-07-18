@@ -6,3 +6,14 @@ export interface AuthResponseDTO {
   isBanned: boolean;
   isVerified: boolean;
 }
+
+export interface RegisterRequestDTO {
+  name: string | null;
+  email: string;
+  password: string;
+}
+
+export interface LoginRequestDTO {
+  email: string;
+  password: string;
+}

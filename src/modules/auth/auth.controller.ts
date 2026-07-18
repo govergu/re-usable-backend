@@ -1,16 +1,5 @@
 import { asyncHandler } from "@common/utils/asyncHandler.js";
-import {
-  AuthService,
-  forgotPassword,
-  getCurrentUser,
-  loginUser,
-  logOutUser,
-  refreshUserToken,
-  registerUser,
-  resendVerificationEmail,
-  resetPassword,
-  verifyEmailToken,
-} from "./auth.service.js";
+import { AuthService } from "./auth.service.js";
 import { ApiResponse } from "@common/utils/apiResponse.js";
 import { HTTP_STATUS } from "@common/constants/httpStatusCode.js";
 import { Request, Response } from "express";
@@ -41,16 +30,21 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const login = asyncHandler(async (req: Request, res: Response) => {
-  const { email, password } = req.body;
+  // const { email, password } = req.body;
 
-  const { user, accessToken, refreshToken } = await loginUser(email, password);
+  // const { user, accessToken, refreshToken } = await loginUser(email, password);
+  const { user, accessToken, refreshToken } = await authService.loginUser(
+    req.body,
+  );
 
   setTokenCookie(res, "accessToken", accessToken, ACCESS_TOKEN_EXPIRY);
   setTokenCookie(res, "refreshToken", refreshToken, REFRESH_TOKEN_EXPIRY);
   //   setCsrfCookie(res);
+
+  const responseData = AuthMapper.toResponse(user);
   return ApiResponse.success(
     res,
-    user,
+    { user: responseData },
     "Successfully logged in",
     HTTP_STATUS.OK,
   );
@@ -63,15 +57,25 @@ export const verifyEmail = asyncHandler(async (req: Request, res: Response) => {
     throw new AppError(400, "Token missing");
   }
 
-  const { user, accessToken, refreshToken } = await verifyEmailToken(
-    token as string,
-  );
+  // const { user, accessToken, refreshToken } = await verifyEmailToken(
+  //   token as string,
+  // );
+
+  const { user, accessToken, refreshToken } =
+    await authService.verifyEmailToken(token as string);
+
+  const responseData = AuthMapper.toResponse(user);
 
   setTokenCookie(res, "accessToken", accessToken, ACCESS_TOKEN_EXPIRY);
   setTokenCookie(res, "refreshToken", refreshToken, REFRESH_TOKEN_EXPIRY);
   // setCsrfCookie(res);
 
-  return ApiResponse.success(res, user, "Email Verified Successfully");
+  return ApiResponse.success(
+    res,
+    { user: responseData },
+    "Email Verified Successfully",
+    HTTP_STATUS.OK,
+  );
 });
 
 export const resendVerificationEmailController = asyncHandler(
@@ -83,8 +87,9 @@ export const resendVerificationEmailController = asyncHandler(
       throw new AppError(400, "Email address is required");
     }
 
+    await authService.resendVerificationEmail(email);
     // 2. Call the service layer function
-    await resendVerificationEmail(email);
+    // await resendVerificationEmail(email);
 
     // 3. Return a standard unified api response
     return ApiResponse.success(res, "Verification Link sent successfully");
@@ -93,7 +98,9 @@ export const resendVerificationEmailController = asyncHandler(
 
 export const refresh = asyncHandler(async (req: Request, res: Response) => {
   const token = req.cookies.refreshToken;
-  const { accessToken, refreshToken } = await refreshUserToken(token);
+  // const { accessToken, refreshToken } = await refreshUserToken(token);
+  const { accessToken, refreshToken } =
+    await authService.refreshUserToken(token);
 
   setTokenCookie(res, "accessToken", accessToken, ACCESS_TOKEN_EXPIRY);
   setTokenCookie(res, "refreshToken", refreshToken, REFRESH_TOKEN_EXPIRY);
@@ -102,7 +109,8 @@ export const refresh = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const logout = asyncHandler(async (req: Request, res: Response) => {
-  await logOutUser(req.user.id);
+  // await logOutUser(req.user.id);
+  await authService.logOutUser(req.user.id);
 
   res.clearCookie("accessToken");
   res.clearCookie("refreshToken");
@@ -114,7 +122,8 @@ export const forgotPasswordController = asyncHandler(
   async (req: Request, res: Response) => {
     const { email } = req.body;
 
-    await forgotPassword(email);
+    // await forgotPassword(email);
+    await authService.forgotPassword(email);
 
     return ApiResponse.success(res, "Password reset link sent!!");
   },
@@ -129,16 +138,27 @@ export const resetPasswordController = asyncHandler(
       throw new AppError(400, "Token missing");
     }
 
-    await resetPassword(token as string, newPassword);
+    await authService.resetPassword(token as string, newPassword);
+
+    // await resetPassword(token as string, newPassword);
 
     return ApiResponse.success(res, "Password reset success");
   },
 );
 
 export const me = asyncHandler(async (req: Request, res: Response) => {
-  const user = await getCurrentUser(req.user.id);
+  // const user = await getCurrentUser(req.user.id);
 
-  return ApiResponse.success(res, user, "Hey it's you!!");
+  const user = await authService.getCurrentUser(req.user.id);
+
+  const responseData = AuthMapper.toResponse(user);
+
+  return ApiResponse.success(
+    res,
+    { user: responseData },
+    "Hey it's you!!",
+    HTTP_STATUS.OK,
+  );
 
   // res.status(201).json({
   //   success: true,

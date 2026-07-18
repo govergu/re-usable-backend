@@ -13,7 +13,7 @@ export class AuthMapper {
     };
   }
 
-  static toManyResponse(users: User[]): AuthResponseDTO[] {
-    return users.map((user) => this.toResponse(user));
-  }
+  //   static toManyResponse(users: User[]): AuthResponseDTO[] {
+  //     return users.map((user) => this.toResponse(user));
+  //   }
 }

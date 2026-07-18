@@ -20,13 +20,6 @@ import {
 } from "./auth.validation.js";
 import { protect } from "@common/middleware/auth.middleware.js";
 
-// const authRoutes = express.authRoutes();
-
-// authRoutes.post("/register", register);
-// authRoutes.post("/login", login);
-
-// export default authRoutes;
-
 export const authRoutes = express.Router();
 
 authRoutes.post("/register", validate(registerSchema), register);

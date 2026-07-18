@@ -3,6 +3,7 @@ import { UserService } from "./user.service.js";
 import { Request, Response } from "express";
 import { ApiResponse } from "@common/utils/apiResponse.js";
 import { HTTP_STATUS } from "@common/constants/httpStatusCode.js";
+import { UserMapper } from "./user.mapper.js";
 
 const userService = new UserService();
 
@@ -10,9 +11,11 @@ export const updateProfileController = asyncHandler(
   async (req: Request, res: Response) => {
     const updatedUser = await userService.updateProfile(req.body, req.user.id);
 
+    const responseData = UserMapper.toResponse(updatedUser);
+
     return ApiResponse.success(
       res,
-      { user: updatedUser },
+      { user: responseData },
       "User profile updated successfully",
       HTTP_STATUS.OK,
     );

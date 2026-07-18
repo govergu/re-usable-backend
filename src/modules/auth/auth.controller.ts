@@ -1,5 +1,6 @@
 import { asyncHandler } from "@common/utils/asyncHandler.js";
 import {
+  AuthService,
   forgotPassword,
   getCurrentUser,
   loginUser,
@@ -16,18 +17,24 @@ import { Request, Response } from "express";
 import { setTokenCookie } from "@common/utils/cookies.js";
 import { ENV } from "@config/env.js";
 import { AppError } from "@common/utils/appError.js";
+import { AuthMapper } from "./auth.mapper.js";
 
 const ACCESS_TOKEN_EXPIRY = 15 * 60; // 15 minutes
 const REFRESH_TOKEN_EXPIRY = Number(ENV.COOKIE_EXPIRES_DAYS) * 24 * 60 * 60;
 
-export const register = asyncHandler(async (req: Request, res: Response) => {
-  const { name, email, password } = req.body;
+const authService = new AuthService();
 
-  const user = await registerUser(name, email, password);
+export const register = asyncHandler(async (req: Request, res: Response) => {
+  // const { name, email, password } = req.body;
+
+  // const user = await registerUser(name, email, password);
+  const user = await authService.registerUser(req.body);
+
+  const responseData = AuthMapper.toResponse(user);
 
   return ApiResponse.success(
     res,
-    user,
+    { user: responseData },
     "Check you email for verification",
     HTTP_STATUS.CREATED,
   );

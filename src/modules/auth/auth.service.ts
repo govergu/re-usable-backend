@@ -8,6 +8,8 @@ import { sendMail } from "@infrastructure/services/email.service.js";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
+import { AuthRepository } from "./auth.repository.js";
+import { Prisma } from "@generated/prisma/client.js";
 
 const hashToken = (token: string) =>
   crypto.createHash("sha256").update(token).digest("hex");
@@ -333,3 +335,45 @@ export const getCurrentUser = async (userId: string) => {
   // const { password: _, ...userWithoutPassword } = user;
   return userObj;
 };
+
+export class AuthService {
+  private authRepository: AuthRepository;
+
+  constructor() {
+    this.authRepository = new AuthRepository();
+  }
+
+  async registerUser(inputData: Prisma.UserCreateInput) {
+    const existingUser = await this.authRepository.findByEmail(inputData.email);
+
+    if (existingUser) {
+      throw new AppError(400, "Account exists already");
+    }
+    const hashPassword = await bcrypt.hash(inputData.password, 10);
+
+    const { rawToken, hashedToken } = generateToken();
+
+    const user = await this.authRepository.create({
+      ...inputData,
+      password: hashPassword,
+      emailVerificationToken: hashedToken,
+      emailVerificationExpires: new Date(Date.now() + 10 * 60 * 1000),
+    });
+
+    //  Verification link
+    const verifyURL = `${ENV.FRONTEND_URL}/verify-email/${rawToken}`;
+
+    // email with retry logic implemented
+    await retryWithBackoff(
+      () =>
+        sendMail(
+          user.email,
+          "Verify your email",
+          `<h3>Click to verify:</h3><a href="${verifyURL}">${verifyURL}</a>`,
+        ),
+      { retries: 3, delay: 1000 },
+    );
+
+    return user;
+  }
+}

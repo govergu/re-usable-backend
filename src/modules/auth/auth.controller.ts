@@ -7,11 +7,17 @@ import { setTokenCookie } from "@common/utils/cookies.js";
 import { ENV } from "@config/env.js";
 import { AppError } from "@common/utils/appError.js";
 import { AuthMapper } from "./auth.mapper.js";
+import { AuthRepository } from "./auth.repository.js";
 
 const ACCESS_TOKEN_EXPIRY = 15 * 60; // 15 minutes
 const REFRESH_TOKEN_EXPIRY = Number(ENV.COOKIE_EXPIRES_DAYS) * 24 * 60 * 60;
 
-const authService = new AuthService();
+// const authService = new AuthService();
+
+const authRepository = new AuthRepository();
+
+// 2. Inject it into the service instance here!
+const authService = new AuthService(authRepository);
 
 export const register = asyncHandler(async (req: Request, res: Response) => {
   // const { name, email, password } = req.body;

@@ -8,6 +8,7 @@ import { IPasswordHasher } from "@common/interfaces/password-hasher.interface.js
 import { ITokenService } from "@common/interfaces/token-service.interface.js";
 import { IEmailProvider } from "@common/interfaces/email-provider.interface.js";
 import { AUTH_CONFIG } from "./auth.constants.js";
+import { Errors } from "@common/utils/errors.js";
 
 export class AuthService {
   constructor(
@@ -23,7 +24,8 @@ export class AuthService {
     const existingUser = await this.authRepository.findByEmail(inputData.email);
 
     if (existingUser) {
-      throw new AppError(HTTP_STATUS.BAD_REQUEST, "Account exists already");
+      // throw new AppError(HTTP_STATUS.BAD_REQUEST, "Account exists already");
+      throw Errors.badRequest("Account exists already");
     }
     const hashPassword = await this.passwordHasher.hash(inputData.password);
 
@@ -55,7 +57,8 @@ export class AuthService {
     // 1. Fetch raw identity via repository
     const user = await this.authRepository.findByEmail(credentials.email);
     if (!user) {
-      throw new AppError(HTTP_STATUS.NOT_FOUND, "Invalid Credentials");
+      // throw new AppError(HTTP_STATUS.NOT_FOUND, "Invalid Credentials");
+      throw Errors.notFound("Invalid Credentials");
     }
 
     // 2. Validate cryptographic hash
@@ -65,12 +68,14 @@ export class AuthService {
     );
 
     if (!isPasswordValid) {
-      throw new AppError(HTTP_STATUS.NOT_FOUND, "Invalid Credentials");
+      // throw new AppError(HTTP_STATUS.NOT_FOUND, "Invalid Credentials");
+      throw Errors.notFound("Invalid Credentials");
     }
 
     // 3. Evaluate platform ban safety gates
     if (user.isBanned) {
-      throw new AppError(HTTP_STATUS.FORBIDDEN, "You have been banned!!");
+      // throw new AppError(HTTP_STATUS.FORBIDDEN, "You have been banned!!");
+      throw Errors.forbidden("You have been banned!!");
     }
 
     // 4. Generate security tokens
@@ -97,10 +102,11 @@ export class AuthService {
     const user = await this.authRepository.findByVerificationToken(hashedToken);
 
     if (!user) {
-      throw new AppError(
-        HTTP_STATUS.BAD_REQUEST,
-        "Invalid or expired verification token",
-      );
+      // throw new AppError(
+      //   HTTP_STATUS.BAD_REQUEST,
+      //   "Invalid or expired verification token",
+      // );
+      throw Errors.badRequest("Invalid or expired verification token");
     }
 
     const accessToken = this.tokenService.signAccessToken(user.id, user.role);
@@ -119,17 +125,19 @@ export class AuthService {
   async resendVerificationEmail(email: string): Promise<boolean> {
     const user = await this.authRepository.findByEmail(email);
     if (!user) {
-      throw new AppError(
-        HTTP_STATUS.NOT_FOUND,
-        "No account found with this email address",
-      );
+      // throw new AppError(
+      //   HTTP_STATUS.NOT_FOUND,
+      //   "No account found with this email address",
+      // );
+      throw Errors.notFound("No account found with this email address");
     }
 
     if (user.isVerified) {
-      throw new AppError(
-        HTTP_STATUS.BAD_REQUEST,
-        "This account is already verified",
-      );
+      // throw new AppError(
+      //   HTTP_STATUS.BAD_REQUEST,
+      //   "This account is already verified",
+      // );
+      throw Errors.badRequest("This account is already verified");
     }
 
     const { rawToken, hashedToken } = this.tokenService.generateRandomToken();
@@ -159,31 +167,35 @@ export class AuthService {
     token: string,
   ): Promise<{ accessToken: string; refreshToken: string }> {
     if (!token) {
-      throw new AppError(HTTP_STATUS.UNAUTHORIZED, "No refresh token provided");
+      // throw new AppError(HTTP_STATUS.UNAUTHORIZED, "No refresh token provided");
+      throw Errors.unauthorized("No refresh token provided");
     }
 
     let decoded: any;
     try {
       decoded = this.tokenService.verifyRefreshToken(token);
     } catch {
-      throw new AppError(HTTP_STATUS.UNAUTHORIZED, "Invalid refresh token");
+      // throw new AppError(HTTP_STATUS.UNAUTHORIZED, "Invalid refresh token");
+      throw Errors.unauthorized("Invalid refresh token");
     }
 
     const incomingHash = this.tokenService.hashToken(token);
     const user = await this.authRepository.findById(decoded.id);
 
     if (!user || user.refreshToken !== incomingHash) {
-      throw new AppError(
-        HTTP_STATUS.UNAUTHORIZED,
-        "Token mismatch or session expired",
-      );
+      // throw new AppError(
+      //   HTTP_STATUS.UNAUTHORIZED,
+      //   "Token mismatch or session expired",
+      // );
+      throw Errors.unauthorized("Token mismatch or session expired");
     }
 
     if (user.isBanned) {
-      throw new AppError(
-        HTTP_STATUS.FORBIDDEN,
-        "Your account has been banned!!",
-      );
+      // throw new AppError(
+      //   HTTP_STATUS.FORBIDDEN,
+      //   "Your account has been banned!!",
+      // );
+      throw Errors.forbidden("Your account has been banned!!");
     }
 
     const newAccessToken = this.tokenService.signAccessToken(
@@ -245,10 +257,11 @@ export class AuthService {
     const user = await this.authRepository.findByResetToken(hashedToken);
 
     if (!user) {
-      throw new AppError(
-        HTTP_STATUS.BAD_REQUEST,
-        "Invalid or expired password reset token",
-      );
+      // throw new AppError(
+      //   HTTP_STATUS.BAD_REQUEST,
+      //   "Invalid or expired password reset token",
+      // );
+      throw Errors.badRequest("Invalid or expired password reset token");
     }
 
     const hashPassword = await this.passwordHasher.hash(newPassword);
@@ -265,7 +278,8 @@ export class AuthService {
   async getCurrentUser(userId: string): Promise<User> {
     const user = await this.authRepository.findById(userId);
     if (!user) {
-      throw new AppError(HTTP_STATUS.NOT_FOUND, "User not found");
+      // throw new AppError(HTTP_STATUS.NOT_FOUND, "User not found");
+      throw Errors.notFound("User not found");
     }
     return user;
   }

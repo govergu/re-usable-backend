@@ -1,6 +1,5 @@
 import { AppError } from "@common/utils/appError.js";
 import { ENV } from "@config/env.js";
-import crypto from "crypto";
 import { AuthRepository } from "./auth.repository.js";
 import { User } from "@generated/prisma/client.js";
 import { LoginRequestDTO, RegisterRequestDTO } from "./auth.dto.js";
@@ -9,9 +8,6 @@ import { IPasswordHasher } from "@common/interfaces/password-hasher.interface.js
 import { ITokenService } from "@common/interfaces/token-service.interface.js";
 import { IEmailProvider } from "@common/interfaces/email-provider.interface.js";
 import { AUTH_CONFIG } from "./auth.constants.js";
-
-const hashToken = (token: string) =>
-  crypto.createHash("sha256").update(token).digest("hex");
 
 export class AuthService {
   constructor(

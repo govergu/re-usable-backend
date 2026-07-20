@@ -1,40 +1,19 @@
 import { prisma } from "@infrastructure/db.js";
-import { IBaseRepository } from "@common/types/repository.types.js";
 import { Prisma, User } from "@generated/prisma/client.js";
+import { BaseRepository } from "@infrastructure/repositories/base.repository.js";
 
-export class UserRepository implements IBaseRepository<
+export class UserRepository extends BaseRepository<
   User,
   Prisma.UserCreateInput,
   Prisma.UserUpdateInput
 > {
-  async findById(id: string): Promise<User | null> {
-    return prisma.user.findUnique({
-      where: { id },
-    });
+  constructor() {
+    super(prisma.user);
   }
 
   async findByEmail(email: string): Promise<User | null> {
     return prisma.user.findUnique({
       where: { email },
-    });
-  }
-
-  async create(data: Prisma.UserCreateInput): Promise<User> {
-    return prisma.user.create({
-      data,
-    });
-  }
-
-  async update(id: string, data: Prisma.UserUpdateInput): Promise<User> {
-    return prisma.user.update({
-      where: { id },
-      data,
-    });
-  }
-
-  async delete(id: string): Promise<User> {
-    return prisma.user.delete({
-      where: { id },
     });
   }
 }

@@ -8,6 +8,9 @@ import { ENV } from "@config/env.js";
 import { AppError } from "@common/utils/appError.js";
 import { AuthMapper } from "./auth.mapper.js";
 import { AuthRepository } from "./auth.repository.js";
+import { BcryptHasher } from "@infrastructure/security/bcrypt-hasher.service.js";
+import { CryptoJwtTokenService } from "@infrastructure/security/crypto-jwt.service.js";
+import { ResilientNodemailerProvider } from "@infrastructure/email/node-mailer.provider.js";
 
 const ACCESS_TOKEN_EXPIRY = 15 * 60; // 15 minutes
 const REFRESH_TOKEN_EXPIRY = Number(ENV.COOKIE_EXPIRES_DAYS) * 24 * 60 * 60;
@@ -15,9 +18,17 @@ const REFRESH_TOKEN_EXPIRY = Number(ENV.COOKIE_EXPIRES_DAYS) * 24 * 60 * 60;
 // const authService = new AuthService();
 
 const authRepository = new AuthRepository();
+const passwordHasher = new BcryptHasher(10);
+const tokenService = new CryptoJwtTokenService();
+const emailProvider = new ResilientNodemailerProvider();
 
 // 2. Inject it into the service instance here!
-const authService = new AuthService(authRepository);
+const authService = new AuthService(
+  authRepository,
+  passwordHasher,
+  tokenService,
+  emailProvider,
+);
 
 export const register = asyncHandler(async (req: Request, res: Response) => {
   // const { name, email, password } = req.body;

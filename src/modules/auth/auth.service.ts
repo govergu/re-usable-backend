@@ -1,22 +1,25 @@
 import { AppError } from "@common/utils/appError.js";
-import { retryWithBackoff } from "@common/utils/emailRetry.js";
-import { signAccessToken, signRefreshToken } from "@common/utils/jwt.js";
-import { generateToken } from "@common/utils/token.js";
 import { ENV } from "@config/env.js";
-import { sendMail } from "@infrastructure/services/email.service.js";
-import bcrypt from "bcryptjs";
 import crypto from "crypto";
-import jwt from "jsonwebtoken";
 import { AuthRepository } from "./auth.repository.js";
 import { User } from "@generated/prisma/client.js";
 import { LoginRequestDTO, RegisterRequestDTO } from "./auth.dto.js";
 import { HTTP_STATUS } from "@common/constants/httpStatusCode.js";
+import { IPasswordHasher } from "@common/interfaces/password-hasher.interface.js";
+import { ITokenService } from "@common/interfaces/token-service.interface.js";
+import { IEmailProvider } from "@common/interfaces/email-provider.interface.js";
+import { AUTH_CONFIG } from "./auth.constants.js";
 
 const hashToken = (token: string) =>
   crypto.createHash("sha256").update(token).digest("hex");
 
 export class AuthService {
-  constructor(private authRepository: AuthRepository) {
+  constructor(
+    private authRepository: AuthRepository,
+    private passwordHasher: IPasswordHasher,
+    private tokenService: ITokenService,
+    private emailProvider: IEmailProvider,
+  ) {
     // this.authRepository = new AuthRepository();
   }
 
@@ -26,9 +29,9 @@ export class AuthService {
     if (existingUser) {
       throw new AppError(HTTP_STATUS.BAD_REQUEST, "Account exists already");
     }
-    const hashPassword = await bcrypt.hash(inputData.password, 10);
+    const hashPassword = await this.passwordHasher.hash(inputData.password);
 
-    const { rawToken, hashedToken } = generateToken();
+    const { rawToken, hashedToken } = this.tokenService.generateRandomToken();
 
     const user = await this.authRepository.create({
       ...inputData,
@@ -41,15 +44,11 @@ export class AuthService {
     const verifyURL = `${ENV.FRONTEND_URL}/verify-email/${rawToken}`;
 
     // email with retry logic implemented
-    await retryWithBackoff(
-      () =>
-        sendMail(
-          user.email,
-          "Verify your email",
-          `<h3>Click to verify:</h3><a href="${verifyURL}">${verifyURL}</a>`,
-        ),
-      { retries: 3, delay: 1000 },
-    );
+    await this.emailProvider.sendEmail({
+      to: user.email,
+      subject: "Verify your email",
+      html: `<h3>Click to verify:</h3><a href="${verifyURL}">${verifyURL}</a>`,
+    });
 
     return user;
   }
@@ -64,10 +63,11 @@ export class AuthService {
     }
 
     // 2. Validate cryptographic hash
-    const isPasswordValid = await bcrypt.compare(
+    const isPasswordValid = await this.passwordHasher.compare(
       credentials.password,
       user.password,
     );
+
     if (!isPasswordValid) {
       throw new AppError(HTTP_STATUS.NOT_FOUND, "Invalid Credentials");
     }
@@ -78,9 +78,13 @@ export class AuthService {
     }
 
     // 4. Generate security tokens
-    const accessToken = signAccessToken(user.id, user.role);
-    const refreshToken = signRefreshToken(user.id, user.role);
-    const hashedRefreshToken = hashToken(refreshToken);
+    // const accessToken = signAccessToken(user.id, user.role);
+    // const refreshToken = signRefreshToken(user.id, user.role);
+    // const hashedRefreshToken = hashToken(refreshToken);
+
+    const accessToken = this.tokenService.signAccessToken(user.id, user.role);
+    const refreshToken = this.tokenService.signRefreshToken(user.id, user.role);
+    const hashedRefreshToken = this.tokenService.hashToken(refreshToken);
 
     // 5. Commit state change to database
     await this.authRepository.updateRefreshToken(user.id, hashedRefreshToken);
@@ -92,7 +96,8 @@ export class AuthService {
   async verifyEmailToken(
     token: string,
   ): Promise<{ user: User; accessToken: string; refreshToken: string }> {
-    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+    const hashedToken = this.tokenService.hashToken(token);
+    // const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
     const user = await this.authRepository.findByVerificationToken(hashedToken);
 
     if (!user) {
@@ -102,9 +107,9 @@ export class AuthService {
       );
     }
 
-    const accessToken = signAccessToken(user.id, user.role);
-    const refreshToken = signRefreshToken(user.id, user.role);
-    const hashedRefreshToken = hashToken(refreshToken);
+    const accessToken = this.tokenService.signAccessToken(user.id, user.role);
+    const refreshToken = this.tokenService.signRefreshToken(user.id, user.role);
+    const hashedRefreshToken = this.tokenService.hashToken(refreshToken);
 
     const updatedUser = await this.authRepository.updateVerificationSuccess(
       user.id,
@@ -131,8 +136,10 @@ export class AuthService {
       );
     }
 
-    const { rawToken, hashedToken } = generateToken();
-    const expiryWindow = new Date(Date.now() + 10 * 60 * 1000); // 10 Min Window
+    const { rawToken, hashedToken } = this.tokenService.generateRandomToken();
+    const expiryWindow = new Date(
+      Date.now() + AUTH_CONFIG.EMAIL_VERIFICATION_EXPIRY_MS,
+    );
 
     await this.authRepository.updateVerificationToken(
       user.id,
@@ -142,15 +149,11 @@ export class AuthService {
 
     const verifyURL = `${ENV.FRONTEND_URL}/verify-email/${rawToken}`;
 
-    await retryWithBackoff(
-      () =>
-        sendMail(
-          user.email,
-          "Verify your email (New Link)",
-          `<h3>Click to verify:</h3><a href="${verifyURL}">${verifyURL}</a>`,
-        ),
-      { retries: 3, delay: 500 },
-    );
+    await this.emailProvider.sendEmail({
+      to: user.email,
+      subject: "Verify your email (New Link)",
+      html: `<h3>Click to verify:</h3><a href="${verifyURL}">${verifyURL}</a>`,
+    });
 
     return true;
   }
@@ -165,12 +168,12 @@ export class AuthService {
 
     let decoded: any;
     try {
-      decoded = jwt.verify(token, ENV.JWT_REFRESH_SECRET);
+      decoded = this.tokenService.verifyRefreshToken(token);
     } catch {
       throw new AppError(HTTP_STATUS.UNAUTHORIZED, "Invalid refresh token");
     }
 
-    const incomingHash = hashToken(token);
+    const incomingHash = this.tokenService.hashToken(token);
     const user = await this.authRepository.findById(decoded.id);
 
     if (!user || user.refreshToken !== incomingHash) {
@@ -187,9 +190,15 @@ export class AuthService {
       );
     }
 
-    const newAccessToken = signAccessToken(user.id, user.role);
-    const newRefreshToken = signRefreshToken(user.id, user.role);
-    const hashedNewRefreshToken = hashToken(newRefreshToken);
+    const newAccessToken = this.tokenService.signAccessToken(
+      user.id,
+      user.role,
+    );
+    const newRefreshToken = this.tokenService.signRefreshToken(
+      user.id,
+      user.role,
+    );
+    const hashedNewRefreshToken = this.tokenService.hashToken(newRefreshToken);
 
     await this.authRepository.updateRefreshToken(
       user.id,
@@ -210,9 +219,10 @@ export class AuthService {
 
     // Fail silently to prevent account harvesting vulnerabilities
     if (!user) return true;
-
-    const { rawToken, hashedToken } = generateToken();
-    const expiryWindow = new Date(Date.now() + 10 * 60 * 1000);
+    const { rawToken, hashedToken } = this.tokenService.generateRandomToken();
+    const expiryWindow = new Date(
+      Date.now() + AUTH_CONFIG.PASSWORD_RESET_EXPIRY_MS,
+    );
 
     await this.authRepository.updateResetToken(
       user.id,
@@ -222,22 +232,20 @@ export class AuthService {
 
     const resetURL = `${ENV.FRONTEND_URL}/reset-password/${rawToken}`;
 
-    await retryWithBackoff(
-      () =>
-        sendMail(
-          user.email,
-          "Reset your password",
-          `<h3>Reset Password</h3><p>Click below:</p><a href="${resetURL}">${resetURL}</a>`,
-        ),
-      { retries: 3, delay: 1000 },
-    );
+    await this.emailProvider.sendEmail({
+      to: user.email,
+      subject: "Reset your password",
+      html: `<h3>Reset Password</h3><p>Click below:</p><a href="${resetURL}">${resetURL}</a>`,
+    });
 
     return true;
   }
 
   // 6. Complete Reset Password Update
   async resetPassword(token: string, newPassword: string): Promise<boolean> {
-    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+    // const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+    const hashedToken = this.tokenService.hashToken(token);
+
     const user = await this.authRepository.findByResetToken(hashedToken);
 
     if (!user) {
@@ -247,7 +255,8 @@ export class AuthService {
       );
     }
 
-    const hashPassword = await bcrypt.hash(newPassword, 10);
+    const hashPassword = await this.passwordHasher.hash(newPassword);
+
     await this.authRepository.updatePasswordAndClearTokens(
       user.id,
       hashPassword,

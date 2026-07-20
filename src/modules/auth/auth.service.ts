@@ -8,7 +8,7 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import { AuthRepository } from "./auth.repository.js";
-import { Prisma, User } from "@generated/prisma/client.js";
+import { User } from "@generated/prisma/client.js";
 import { LoginRequestDTO, RegisterRequestDTO } from "./auth.dto.js";
 import { HTTP_STATUS } from "@common/constants/httpStatusCode.js";
 

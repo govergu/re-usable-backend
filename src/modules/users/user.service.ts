@@ -4,10 +4,10 @@ import { AppError } from "@common/utils/appError.js";
 import { HTTP_STATUS } from "@common/constants/httpStatusCode.js";
 
 export class UserService {
-  private userRepository: UserRepository;
+  //   private userRepository: UserRepository;
 
-  constructor() {
-    this.userRepository = new UserRepository();
+  constructor(private userRepository: UserRepository) {
+    // this.userRepository = new UserRepository();
   }
 
   async updateProfile(

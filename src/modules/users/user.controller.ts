@@ -4,8 +4,10 @@ import { Request, Response } from "express";
 import { ApiResponse } from "@common/utils/apiResponse.js";
 import { HTTP_STATUS } from "@common/constants/httpStatusCode.js";
 import { UserMapper } from "./user.mapper.js";
+import { UserRepository } from "./user.repository.js";
 
-const userService = new UserService();
+const userRepository = new UserRepository();
+const userService = new UserService(userRepository);
 
 export const updateProfileController = asyncHandler(
   async (req: Request, res: Response) => {

@@ -1,6 +1,7 @@
 import { Prisma, User } from "@generated/prisma/client.js";
 import { prisma } from "@infrastructure/db.js";
 import { BaseRepository } from "@infrastructure/repositories/base.repository.js";
+import { AuthUser } from "./auth.entity.js";
 
 export class AuthRepository extends BaseRepository<
   User,
@@ -11,46 +12,70 @@ export class AuthRepository extends BaseRepository<
     // Pass the actual Prisma delegate instance here
     super(prisma.user);
   }
+  private toEntity(user: User): AuthUser {
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      password: user.password,
+      role: user.role as "USER" | "ADMIN" | "MODERATOR",
+      isBanned: user.isBanned,
+      isVerified: user.isVerified,
+      emailVerificationToken: user.emailVerificationToken,
+      emailVerificationExpires: user.emailVerificationExpires,
+      passwordResetToken: user.passwordResetToken,
+      passwordResetExpires: user.passwordResetExpires,
+      refreshToken: user.refreshToken,
+    };
+  }
 
-  async findByEmail(email: string): Promise<User | null> {
-    return prisma.user.findUnique({
-      where: { email },
-    });
+  // async findByEmail(email: string): Promise<AuthUser | null> {
+  //   const user = prisma.user.findUnique({
+  //     where: { email },
+  //   })
+  //   return user ? this.toEntity(user) : null;
+  // }
+  async findByEmail(email: string): Promise<AuthUser | null> {
+    const user = await prisma.user.findUnique({ where: { email } });
+    return user ? this.toEntity(user) : null;
   }
 
   async updateRefreshToken(
     userId: string,
     hashedRefreshToken: string | null,
-  ): Promise<User> {
-    return prisma.user.update({
+  ): Promise<AuthUser> {
+    const user = await prisma.user.update({
       where: { id: userId },
       data: { refreshToken: hashedRefreshToken },
     });
+    return this.toEntity(user);
   }
 
-  async findByVerificationToken(hashedToken: string): Promise<User | null> {
-    return prisma.user.findFirst({
+  async findByVerificationToken(hashedToken: string): Promise<AuthUser | null> {
+    const user = await prisma.user.findFirst({
       where: {
         emailVerificationToken: hashedToken,
         emailVerificationExpires: { gt: new Date() },
       },
     });
+    return user ? this.toEntity(user) : null;
   }
 
-  async findByResetToken(hashedToken: string): Promise<User | null> {
-    return prisma.user.findFirst({
+  async findByResetToken(hashedToken: string): Promise<AuthUser | null> {
+    const user = await prisma.user.findFirst({
       where: {
         passwordResetToken: hashedToken,
         passwordResetExpires: { gt: new Date() },
       },
     });
+    return user ? this.toEntity(user) : null;
   }
 
   async updateVerificationSuccess(
     userId: string,
     hashedRefreshToken: string,
-  ): Promise<User> {
-    return prisma.user.update({
+  ): Promise<AuthUser> {
+    const user = await prisma.user.update({
       where: { id: userId },
       data: {
         isVerified: true,
@@ -59,41 +84,44 @@ export class AuthRepository extends BaseRepository<
         refreshToken: hashedRefreshToken,
       },
     });
+    return this.toEntity(user);
   }
 
   async updateVerificationToken(
     userId: string,
     hashedToken: string,
     expiry: Date,
-  ): Promise<User> {
-    return prisma.user.update({
+  ): Promise<AuthUser> {
+    const user = await prisma.user.update({
       where: { id: userId },
       data: {
         emailVerificationToken: hashedToken,
         emailVerificationExpires: expiry,
       },
     });
+    return this.toEntity(user);
   }
 
   async updateResetToken(
     userId: string,
     hashedToken: string,
     expiry: Date,
-  ): Promise<User> {
-    return prisma.user.update({
+  ): Promise<AuthUser> {
+    const user = await prisma.user.update({
       where: { id: userId },
       data: {
         passwordResetToken: hashedToken,
         passwordResetExpires: expiry,
       },
     });
+    return this.toEntity(user);
   }
 
   async updatePasswordAndClearTokens(
     userId: string,
     hashPassword: string,
-  ): Promise<User> {
-    return prisma.user.update({
+  ): Promise<AuthUser> {
+    const user = await prisma.user.update({
       where: { id: userId },
       data: {
         password: hashPassword,
@@ -102,5 +130,6 @@ export class AuthRepository extends BaseRepository<
         refreshToken: null, // Clear active sessions on password change
       },
     });
+    return this.toEntity(user);
   }
 }

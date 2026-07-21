@@ -1,8 +1,8 @@
-import { User } from "@generated/prisma/client.js";
 import { AuthResponseDTO } from "./auth.dto.js";
+import { AuthUser } from "./auth.entity.js";
 
 export class AuthMapper {
-  static toResponse(user: User): AuthResponseDTO {
+  static toResponse(user: AuthUser): AuthResponseDTO {
     return {
       id: user.id,
       email: user.email,

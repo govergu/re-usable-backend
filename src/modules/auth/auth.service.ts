@@ -1,14 +1,12 @@
-import { AppError } from "@common/utils/appError.js";
 import { ENV } from "@config/env.js";
 import { AuthRepository } from "./auth.repository.js";
-import { User } from "@generated/prisma/client.js";
 import { LoginRequestDTO, RegisterRequestDTO } from "./auth.dto.js";
-import { HTTP_STATUS } from "@common/constants/httpStatusCode.js";
 import { IPasswordHasher } from "@common/interfaces/password-hasher.interface.js";
 import { ITokenService } from "@common/interfaces/token-service.interface.js";
 import { IEmailProvider } from "@common/interfaces/email-provider.interface.js";
 import { AUTH_CONFIG } from "./auth.constants.js";
 import { Errors } from "@common/utils/errors.js";
+import { AuthUser } from "./auth.entity.js";
 
 export class AuthService {
   constructor(
@@ -20,7 +18,7 @@ export class AuthService {
     // this.authRepository = new AuthRepository();
   }
 
-  async registerUser(inputData: RegisterRequestDTO): Promise<User> {
+  async registerUser(inputData: RegisterRequestDTO): Promise<AuthUser> {
     const existingUser = await this.authRepository.findByEmail(inputData.email);
 
     if (existingUser) {
@@ -53,7 +51,7 @@ export class AuthService {
 
   async loginUser(
     credentials: LoginRequestDTO,
-  ): Promise<{ user: User; accessToken: string; refreshToken: string }> {
+  ): Promise<{ user: AuthUser; accessToken: string; refreshToken: string }> {
     // 1. Fetch raw identity via repository
     const user = await this.authRepository.findByEmail(credentials.email);
     if (!user) {
@@ -96,7 +94,7 @@ export class AuthService {
   // 1. Verify Email Token Flow
   async verifyEmailToken(
     token: string,
-  ): Promise<{ user: User; accessToken: string; refreshToken: string }> {
+  ): Promise<{ user: AuthUser; accessToken: string; refreshToken: string }> {
     const hashedToken = this.tokenService.hashToken(token);
     // const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
     const user = await this.authRepository.findByVerificationToken(hashedToken);
@@ -275,7 +273,7 @@ export class AuthService {
   }
 
   // 7. Context Identity Fetch
-  async getCurrentUser(userId: string): Promise<User> {
+  async getCurrentUser(userId: string): Promise<AuthUser> {
     const user = await this.authRepository.findById(userId);
     if (!user) {
       // throw new AppError(HTTP_STATUS.NOT_FOUND, "User not found");

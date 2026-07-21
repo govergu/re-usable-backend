@@ -26,6 +26,13 @@ export class CryptoJwtTokenService implements ITokenService {
     return signRefreshToken(userId, role);
   }
 
+  verifyAccessToken(token: string): { id: string; role: string } {
+    return jwt.verify(token, ENV.JWT_ACCESS_SECRET) as {
+      id: string;
+      role: string;
+    };
+  }
+
   verifyRefreshToken(token: string): { id: string; role: string } {
     return jwt.verify(token, ENV.JWT_REFRESH_SECRET) as {
       id: string;

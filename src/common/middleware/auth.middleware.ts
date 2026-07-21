@@ -1,63 +1,115 @@
+import { HTTP_STATUS } from "@common/constants/httpStatusCode.js";
+import { ITokenService } from "@common/interfaces/token-service.interface.js";
 import { AppError } from "@common/utils/appError.js";
-import { ENV } from "@config/env.js";
-import { prisma } from "@infrastructure/db.js";
+import { CryptoJwtTokenService } from "@infrastructure/security/crypto-jwt.service.js";
+import { AuthRepository } from "@modules/auth/auth.repository.js";
 import { NextFunction, Request, Response } from "express";
-import jwt from "jsonwebtoken";
 
-export const protect = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
+export const makeProtectMiddleware = (
+  tokenService: ITokenService,
+  authRepository: AuthRepository,
 ) => {
-  let token;
+  return async (req: Request, res: Response, next: NextFunction) => {
+    let token;
+    if (req.headers.authorization?.startsWith("Bearer")) {
+      token = req.headers.authorization.split(" ")[1];
+    } else if (req.cookies?.accessToken) {
+      token = req.cookies.accessToken;
+    }
 
-  // 1. Check Authorization header
-  if (
-    req.headers.authorization &&
-    req.headers.authorization.startsWith("Bearer")
-  ) {
-    token = req.headers.authorization.split(" ")[1];
-  }
-
-  // 2. Check cookies (IMPORTANT for your system)
-  else if (req.cookies?.accessToken) {
-    token = req.cookies.accessToken;
-  }
-
-  // No token found
-  if (!token) {
-    return next(new AppError(401, "You are not logged in"));
-  }
-
-  try {
-    const decoded: any = jwt.verify(token, ENV.JWT_ACCESS_SECRET as string);
-
-    // check the database
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.id },
-      select: { id: true, isBanned: true, role: true, isVerified: true }, // Select only what you need for speed
-    });
-
-    // handle deleted users
-    if (!user) {
+    if (!token) {
       return next(
-        new AppError(401, "The user belonging to this token no longer exists."),
+        new AppError(HTTP_STATUS.UNAUTHORIZED, "You are not logged in"),
       );
     }
 
-    //  Handle banned users
-    if (user.isBanned) {
+    try {
+      const decoded = tokenService.verifyAccessToken(token);
+      const user = await authRepository.findById(decoded.id);
+
+      if (!user) {
+        return next(new AppError(HTTP_STATUS.UNAUTHORIZED, "User not found"));
+      }
+
+      if (user.isBanned) {
+        return next(
+          new AppError(
+            HTTP_STATUS.FORBIDDEN,
+            "Your account has been banned. Access denied.",
+          ),
+        );
+      }
+      req.user = user;
+      next();
+    } catch {
       return next(
-        new AppError(403, "Your account has been banned. Access denied."),
+        new AppError(HTTP_STATUS.UNAUTHORIZED, "Invalid or expired token"),
       );
     }
-
-    req.user = user;
-    next();
-  } catch (error) {
-    return next(new AppError(401, "Invalid token"));
-  }
+  };
 };
+const defaultTokenService = new CryptoJwtTokenService();
+const defaultAuthRepository = new AuthRepository();
+
+export const protect = makeProtectMiddleware(
+  defaultTokenService,
+  defaultAuthRepository,
+);
+
+// export const protect = async (
+//   req: Request,
+//   res: Response,
+//   next: NextFunction,
+// ) => {
+//   let token;
+
+//   // 1. Check Authorization header
+//   if (
+//     req.headers.authorization &&
+//     req.headers.authorization.startsWith("Bearer")
+//   ) {
+//     token = req.headers.authorization.split(" ")[1];
+//   }
+
+//   // 2. Check cookies (IMPORTANT for your system)
+//   else if (req.cookies?.accessToken) {
+//     token = req.cookies.accessToken;
+//   }
+
+//   // No token found
+//   if (!token) {
+//     return next(new AppError(401, "You are not logged in"));
+//   }
+
+//   try {
+//     const decoded: any = jwt.verify(token, ENV.JWT_ACCESS_SECRET as string);
+
+//     // check the database
+//     const user = await prisma.user.findUnique({
+//       where: { id: decoded.id },
+//       select: { id: true, isBanned: true, role: true, isVerified: true }, // Select only what you need for speed
+//     });
+
+//     // handle deleted users
+//     if (!user) {
+//       return next(
+//         new AppError(401, "The user belonging to this token no longer exists."),
+//       );
+//     }
+
+//     //  Handle banned users
+//     if (user.isBanned) {
+//       return next(
+//         new AppError(403, "Your account has been banned. Access denied."),
+//       );
+//     }
+
+//     req.user = user;
+//     next();
+//   } catch (error) {
+//     return next(new AppError(401, "Invalid token"));
+//   }
+// };
 
 export const requireVerification = async (
   req: Request,
